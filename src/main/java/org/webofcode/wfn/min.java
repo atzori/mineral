@@ -38,14 +38,14 @@ import org.apache.jena.sparql.expr.ExprEvalException;
 import org.apache.jena.sparql.expr.ExprList;
 
 /**
- * This class implements the minl function to be used within SPARQL queries in the Apache Fuseki 2 triplestore.
+ * This class implements the min function to be used within SPARQL queries in the Apache Fuseki 2 triplestore.
 */
-public class minl extends FunctionBase {
-    static Logger log = LoggerFactory.getLogger(minl.class);
+public class min extends FunctionBase {
+    static Logger log = LoggerFactory.getLogger(min.class);
     
-    private final static boolean CACHE_ENABLED = true;
-    static final String ENDPOINT = System.getProperty("endpoint");
-    static final String FN_NAME = "http://webofcode.org/wfn/minl";
+    static boolean CACHE_ENABLED = System.getProperty("mineral.optimization","true").equalsIgnoreCase("true");
+    static final String ENDPOINT = System.getProperty("mineral.endpoint");
+    static final String FN_NAME = "http://webofcode.org/wfn/min";
     static int nInstances = 0;
     static Map<String,NodeValue> cache = new ConcurrentHashMap<>();
     static final NodeValue VISITED = NodeValue.makeNode(NodeFactory.createBlankNode("VISITED"));
@@ -54,20 +54,21 @@ public class minl extends FunctionBase {
 
     public static void init() {
         log.info("Registering function {}", FN_NAME);
-        FunctionRegistry.get().put(FN_NAME, minl.class);
+        FunctionRegistry.get().put(FN_NAME, min.class);
         //log.debug(System.getProperties().toString());
         log.info("Endpoint set to {}", ENDPOINT);   
+        log.info("Optimization set to {}", CACHE_ENABLED);
         
         // load sparql template file     
         try {
-            TEMPLATE = String.join("\n", Files.readAllLines(Paths.get(System.getProperty("sparql_template"))));
+            TEMPLATE = String.join("\n", Files.readAllLines(Paths.get(System.getProperty("mineral.sparql_template"))));
         } catch(Exception e) {
             log.error("Error while reading sparql template");
         }
         //log.debug("Template set to {}", TEMPLATE);
         
     }
-    public minl() {
+    public min() {
         nInstances += 1;
         //log.debug("Creating instance #{}", nInstances);
     }

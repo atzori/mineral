@@ -12,7 +12,7 @@ Functions and usage
 -------------------
 We developed the following two functions (the `wfn` prefix stands for `<http://webofcode.org/wfn/>`):
 
-  - `wfn:minl(?query, [, ?i0, ?i1, ...])` - memoization is used to cut off loops and increase speed on already-seen states in the search space
+  - `wfn:min(?query, [, ?i0, ?i1, ...])` - memoization is used to cut off loops and increase speed on already-seen states in the search space
   - `wfn:mina(?query, ?a [, ?i0, ?i1, ...])` - Zaniolo's inspired technique is used to cut off unnecessary branches in the search space including loops (parameter `a` is used as an accumulator, see below)
  
 In both versions, optimization can be disabled via server configuration.
@@ -37,16 +37,16 @@ Examples
 ### Computing the Factorial
 In the following it is shown how to compute the factorial of 3.
 
-With **minl**:
+With **min**:
 
     PREFIX : <http://webofcode.org/wfn/>
     
     SELECT ?result { 
         # bind variables to parameter values 
-        VALUES ?query { "BIND ( IF(?i0 <= 0, 1, ?i0 * :minl(?query, ?i0-1)) AS ?result)" }
+        VALUES ?query { "BIND ( IF(?i0 <= 0, 1, ?i0 * :min(?query, ?i0-1)) AS ?result)" }
 
         # actual call of the recursive query 
-        BIND(:minl(?query, 3) AS ?result)
+        BIND(:min(?query, 3) AS ?result)
     } 
 
 
@@ -67,17 +67,17 @@ With **mina**:
 ### Graph search: shortest distance between 2 nodes
 In the following it is shown how to compute the shortest distance between two nodes ([dbo:PopulatedPlace](http://dbpedia.org/ontology/PopulatedPlace) and [dbo:Village](http://dbpedia.org/ontology/Village)).
 
-With **minl**:
+With **min**:
 
     PREFIX : <http://webofcode.org/wfn/>
 
     SELECT ?result { 
         # bind variables to parameter values 
         VALUES ?query { 
-            "OPTIONAL { ?i0 <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?next } BIND( IF(?i0 = <http://dbpedia.org/ontology/PopulatedPlace>, 0 , 1 + wfn:minl(?query, ?next)) AS ?result)" }
+            "OPTIONAL { ?i0 <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?next } BIND( IF(?i0 = <http://dbpedia.org/ontology/PopulatedPlace>, 0 , 1 + wfn:min(?query, ?next)) AS ?result)" }
 
         # actual call of the recursive query 
-        BIND( :minl(?query, <http://dbpedia.org/ontology/Village>) AS ?result)
+        BIND( :min(?query, <http://dbpedia.org/ontology/Village>) AS ?result)
     } 
 
 
