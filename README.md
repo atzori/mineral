@@ -63,6 +63,39 @@ With **mina**:
     } 
 
 
+### Computing Fibonacci
+Compute the fibonacci number 
+
+With **min**:
+
+    PREFIX : <http://webofcode.org/wfn/>
+    
+    SELECT ?result { 
+        # bind variables to parameter values 
+        VALUES ?query { 
+           "BIND ( IF(?i0 <= 2, 1, :min(?query, ?i0 -1) + :min(?query, ?i0 -2) ) AS ?result)" }
+
+        # actual call of the recursive query 
+        BIND(:min(?query, 6) AS ?result)
+    } 
+
+With **mina**:
+
+    # for explanation, see: https://marcaube.ca/2016/03/optimizing-a-fibonacci-function
+    # (?i0=prev, ?i1=n, ?a=acc)
+    PREFIX : <http://webofcode.org/wfn/>
+    
+    SELECT ?result { 
+        # bind variables to parameter values 
+        VALUES ?query { 
+           "BIND ( IF(?i0 <= 0, ?a, :mina(?query, ?a+ ?i0, ?a, ?i1 -1 ) ) AS ?result)" }
+
+        # actual call of the recursive query 
+        BIND(:mina(?query, 0, 1, 6) AS ?result)
+    } 
+
+
+
 
 ### Graph search: shortest distance between 2 nodes
 In the following it is shown how to compute the shortest distance between two nodes ([dbo:PopulatedPlace](http://dbpedia.org/ontology/PopulatedPlace) and [dbo:Village](http://dbpedia.org/ontology/Village)).
