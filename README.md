@@ -10,10 +10,15 @@ mineral: Computing Optimized Recursive SPARQL Queries with Aggregates
 
 Functions and usage
 -------------------
-We developed the following two functions (the `wfn` prefix stands for `<http://webofcode.org/wfn/>`):
+We developed the following function (the `wfn` prefix stands for `<http://webofcode.org/wfn/>`):
 
-  - `wfn:min(?query, [, ?i0, ?i1, ...])` - memoization is used to cut off loops and increase speed on already-seen states in the search space
-  - `wfn:mina(?query, ?a [, ?i0, ?i1, ...])` - Zaniolo's inspired technique is used to cut off unnecessary branches in the search space including loops (parameter `a` is used as an accumulator, see below)
+    wfn:mr(?query [, ?i0, ?i1, ...])
+
+that can be used with different optimization strategies (configurable server-side):
+  
+  - `none` - no optimization used to cut off 
+  - `memo` - memoization is used to cut off loops and increase speed on already-seen states in the search space
+  - `fast` - accumulator-based recursion inspired by Zaniolo's technique is used to cut off unnecessary branches in the search space including loops (the parameter, `?i0`, is used as an accumulator to be minimized, see below)
  
 In both versions, optimization can be disabled via server configuration.
 
@@ -23,10 +28,11 @@ Install and compile *(tested with Fuseki 3.8.0)*
 1. ensure you have OpenJDK 8 or later correctly installed
 2. download and extract [Apache Fuseki 2](https://jena.apache.org/download/#apache-jena-fuseki) on directory `./fuseki`
 3. compile Java source code of functions: `./compile`
-4. run fuseki using testing settings: `./run-fuseki`
+4. run fuseki using testing settings: `OPT=memo ./run-fuseki`
     - fuseki server settings in `config/config.ttl` 
     - initial data in `config/dataset.ttl` 
     - log4j settings in `config/log4j.properties`
+    - optimization is `memo` by default, use `OPT=fast` for fast optimization or `OPT=none` to disable optimization
 5. go to: [http://127.0.0.1:3030](http://127.0.0.1:3030)
 
 
@@ -37,12 +43,12 @@ Examples
 ### Computing the Factorial
 In the following it is shown how to compute the factorial of 3.
 
-With **min**, inline:
+Simple, inline (without accumulator):
 
     PREFIX : <http://webofcode.org/wfn/>
     
     SELECT ?result { 
-        BIND(:min("BIND ( IF(?i0 <= 0, 1, ?i0 * :min(?query, ?i0-1)) AS ?result)", 3) AS ?result)
+        BIND(:mr("BIND ( IF(?i0 <= 0, 1, ?i0 * :mr(?query, ?i0-1)) AS ?result)", 3) AS ?result)
     } 
 
 
@@ -52,23 +58,33 @@ or alternatively (more verbose but clearer):
     
     SELECT ?result { 
         # bind variables to parameter values 
-        VALUES ?query { "BIND ( IF(?i0 <= 0, 1, ?i0 * :min(?query, ?i0-1)) AS ?result)" }
+        VALUES ?query { "BIND ( IF(?i0 <= 0, 1, ?i0 * :mr(?query, ?i0-1)) AS ?result)" }
 
         # actual call of the recursive query 
-        BIND(:min(?query, 3) AS ?result)
+        BIND(:mr(?query, 3) AS ?result)
     } 
     
 
-With **mina**:
+With support for accumulator:
+
+    PREFIX : <http://webofcode.org/wfn/>
+    
+    SELECT ?result { 
+        BIND(:mr("BIND ( IF(?i1 <= 0, ?i0, :mr(?query, ?i0 * ?i1, ?i1-1)) AS ?result)", 1, 3) AS ?result)
+    } 
+
+
+
+or verbosely:
 
     PREFIX : <http://webofcode.org/wfn/>
     
     SELECT ?result { 
         # bind variables to parameter values 
-        VALUES ?query { "BIND ( IF(?i0 <= 0, ?a, :mina(?query, ?a * ?i0, ?i0-1)) AS ?result)" }
+        VALUES ?query { "BIND ( IF(?i1 <= 0, ?a, :mr(?query, ?i0 * ?i1, ?i1-1)) AS ?result)" }
 
         # actual call of the recursive query 
-        BIND(:mina(?query, 1, 3) AS ?result)
+        BIND(:mr(?query, 1, 3) AS ?result)
     } 
 
 
@@ -76,67 +92,67 @@ With **mina**:
 ### Computing Fibonacci
 Compute the fibonacci number 
 
-With **min**:
+Without accumulator:
 
     PREFIX : <http://webofcode.org/wfn/>
     
     SELECT ?result { 
         # bind variables to parameter values 
         VALUES ?query { 
-           "BIND ( IF(?i0 <= 2, 1, :min(?query, ?i0 -1) + :min(?query, ?i0 -2) ) AS ?result)" }
+           "BIND ( IF(?i0 <= 2, 1, :mr(?query, ?i0 -1) + :mr(?query, ?i0 -2) ) AS ?result)" }
 
         # actual call of the recursive query 
-        BIND(:min(?query, 6) AS ?result)
+        BIND(:mr(?query, 6) AS ?result)
     } 
 
-With **mina**:
+With accumulator:
 
     # for explanation, see: https://marcaube.ca/2016/03/optimizing-a-fibonacci-function
-    # (?i0=prev, ?i1=n, ?a=acc)
+    # (?i0=acc, ?i1=prev, ?i2=n)
     PREFIX : <http://webofcode.org/wfn/>
     
     SELECT ?result { 
         # bind variables to parameter values 
         VALUES ?query { 
-           "BIND ( IF(?i0 <= 0, ?a, :mina(?query, ?a+ ?i0, ?a, ?i1 -1 ) ) AS ?result)" }
+           "BIND ( IF(?i2 <= 0, ?i0, :mr(?query, ?i0 + ?i1, ?i0, ?i2 -1 ) ) AS ?result)" }
 
         # actual call of the recursive query 
-        BIND(:mina(?query, 0, 1, 6) AS ?result)
+        BIND(:mr(?query, 0, 1, 47) AS ?result)
     } 
-
 
 
 
 ### Graph search: shortest distance between 2 nodes
 In the following it is shown how to compute the shortest distance between two nodes ([dbo:PopulatedPlace](http://dbpedia.org/ontology/PopulatedPlace) and [dbo:Village](http://dbpedia.org/ontology/Village)).
 
-With **min**:
+Without accumulator:
 
     PREFIX : <http://webofcode.org/wfn/>
 
     SELECT ?result { 
         # bind variables to parameter values 
         VALUES ?query { 
-            "OPTIONAL { ?i0 <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?next } BIND( IF(?i0 = <http://dbpedia.org/ontology/PopulatedPlace>, 0 , 1 + wfn:min(?query, ?next)) AS ?result)" }
+            "OPTIONAL { ?i0 <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?next } BIND( IF(?i0 = <http://dbpedia.org/ontology/PopulatedPlace>, 0 , 1 + wfn:mr(?query, ?next)) AS ?result)" }
 
         # actual call of the recursive query 
-        BIND( :min(?query, <http://dbpedia.org/ontology/Village>) AS ?result)
+        BIND( :mr(?query, <http://dbpedia.org/ontology/Village>) AS ?result)
     } 
 
 
 
-With **mina**:
+With accumulator:
 
-    PREFIX wfn: <http://webofcode.org/wfn/>
+    PREFIX : <http://webofcode.org/wfn/>
 
     SELECT ?result { 
         # bind variables to parameter values 
         VALUES ?query { 
-            "OPTIONAL { ?i0 <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?next } BIND( IF(?i0 = <http://dbpedia.org/ontology/PopulatedPlace>, ?a, :mina(?query, ?n+1, ?next)) AS ?result)" }
+            "OPTIONAL { ?i1 <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?next } BIND( IF(?i1 = <http://dbpedia.org/ontology/PopulatedPlace>, ?i0, :mr(?query, ?i0+1, ?next)) AS ?result)" }
 
         # actual call of the recursive query 
-        BIND( :mina(?query, 0, <http://dbpedia.org/ontology/Village>) AS ?result)
+        BIND( :mr(?query, 0, <http://dbpedia.org/ontology/Village>) AS ?result)
     } 
+
 
 
 

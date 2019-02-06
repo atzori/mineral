@@ -38,26 +38,33 @@ import org.apache.jena.sparql.expr.ExprEvalException;
 import org.apache.jena.sparql.expr.ExprList;
 
 /**
- * This class implements the min function to be used within SPARQL queries in the Apache Fuseki 2 triplestore.
+ * This class implements the mr function to be used within SPARQL queries in the Apache Fuseki 2 triplestore.
 */
-public class min extends FunctionBase {
-    static Logger log = LoggerFactory.getLogger(min.class);
+public class mr extends FunctionBase {
+    static Logger log = LoggerFactory.getLogger(mr.class);
     
-    static boolean CACHE_ENABLED = System.getProperty("mineral.opt","true").equalsIgnoreCase("true");
+    static String optimization = getopt();
+    static boolean CACHE_ENABLED = optimization.equals("memo");
     static final String ENDPOINT = System.getProperty("mineral.endpoint");
-    static final String FN_NAME = "http://webofcode.org/wfn/min";
+    static final String FN_NAME = "http://webofcode.org/wfn/mr";
     static int nInstances = 0;
     static Map<String,NodeValue> cache = new ConcurrentHashMap<>();
     static final NodeValue VISITED = NodeValue.makeNode(NodeFactory.createBlankNode("VISITED"));
     static  String TEMPLATE;
 
+    static String getopt() {
+        String opt = System.getenv​("opt");
+        if (opt==null) opt = "memo";
+        return opt.toLowerCase();
+    }
 
     public static void init() {
         log.info("Registering function {}", FN_NAME);
-        FunctionRegistry.get().put(FN_NAME, min.class);
+        FunctionRegistry.get().put(FN_NAME, mr.class);
         //log.debug(System.getProperties().toString());
         log.info("Endpoint set to {}", ENDPOINT);   
-        log.info("Optimization set to {}", CACHE_ENABLED);
+        log.info("Cache results set to {}", CACHE_ENABLED);
+        log.info("Optimization set to {}", optimization);
         
         // load sparql template file     
         try {
@@ -68,7 +75,7 @@ public class min extends FunctionBase {
         //log.debug("Template set to {}", TEMPLATE);
         
     }
-    public min() {
+    public mr() {
         nInstances += 1;
         //log.debug("Creating instance #{}", nInstances);
     }
