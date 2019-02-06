@@ -4,7 +4,7 @@ mineral: Computing Optimized Recursive SPARQL Queries with Aggregates
 **NOTE: THIS IS A DEVELOPMENT VERSION (WORK IN PROGRESS)** 
 
 
-**mineral**, loosely for *min* (function) *e*nhanced *r*ecursion through *a*ccumu*l*ation is a custom SPARQL function for optimized recursion within SPARQL with aggregates, inspired by the work by Prof. [Carlo Zaniolo](http://web.cs.ucla.edu/~zaniolo/) on [*Fixpoint semantics and optimization of recursive Datalog programs with aggregates*](https://doi.org/10.1017/S1471068417000436) and work by Prof. [Maurizio Atzori](http://atzori.webofcode.org/) on [*Computing recursive SPARQL queries](https://doi.org/10.1109/ICSC.2014.54) (see on [github](https://github.com/atzori/runSPARQL)).
+**mineral**, loosely for *min* (function) *e*nhanced *r*ecursion through *a*ccumu*l*ation is a custom SPARQL function for optimized recursion within SPARQL with aggregates, inspired by the work by Prof. [Carlo Zaniolo](http://web.cs.ucla.edu/~zaniolo/) on [*Fixpoint semantics and optimization of recursive Datalog programs with aggregates*](https://doi.org/10.1017/S1471068417000436) and work by Prof. [Maurizio Atzori](http://atzori.webofcode.org/) on [*Computing recursive SPARQL queries*](https://doi.org/10.1109/ICSC.2014.54) (see on [github](https://github.com/atzori/runSPARQL)).
 
 
 
