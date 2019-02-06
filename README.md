@@ -37,7 +37,16 @@ Examples
 ### Computing the Factorial
 In the following it is shown how to compute the factorial of 3.
 
-With **min**:
+With **min**, inline:
+
+    PREFIX : <http://webofcode.org/wfn/>
+    
+    SELECT ?result { 
+        BIND(:min("BIND ( IF(?i0 <= 0, 1, ?i0 * :min(?query, ?i0-1)) AS ?result)", 3) AS ?result)
+    } 
+
+
+or alternatively (more verbose but clearer):
 
     PREFIX : <http://webofcode.org/wfn/>
     
@@ -48,7 +57,7 @@ With **min**:
         # actual call of the recursive query 
         BIND(:min(?query, 3) AS ?result)
     } 
-
+    
 
 With **mina**:
 
@@ -56,11 +65,12 @@ With **mina**:
     
     SELECT ?result { 
         # bind variables to parameter values 
-        VALUES ?query { "BIND ( IF(?i0 <= 0, ?n, :mina(?query, ?a * ?i0, ?i0-1)) AS ?result)" }
+        VALUES ?query { "BIND ( IF(?i0 <= 0, ?a, :mina(?query, ?a * ?i0, ?i0-1)) AS ?result)" }
 
         # actual call of the recursive query 
         BIND(:mina(?query, 1, 3) AS ?result)
     } 
+
 
 
 ### Computing Fibonacci
