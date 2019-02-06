@@ -33,7 +33,7 @@ Install and compile *(tested with Fuseki 3.8.0)*
     - initial data in `config/dataset.ttl` 
     - log4j settings in `config/log4j.properties`
     - optimization is `memo` by default, use `OPT=fast` for fast optimization or `OPT=none` to disable optimization
-5. go to: [http://127.0.0.1:3030](http://127.0.0.1:3030)
+5. go to: [http://127.0.0.1:3030](http://127.0.0.1:3030) and run a recursive query (see examples below)
 
 
 
