@@ -43,7 +43,7 @@ import org.apache.jena.sparql.expr.ExprList;
 public class min extends FunctionBase {
     static Logger log = LoggerFactory.getLogger(min.class);
     
-    static boolean CACHE_ENABLED = System.getProperty("mineral.optimization","true").equalsIgnoreCase("true");
+    static boolean CACHE_ENABLED = System.getProperty("mineral.opt","true").equalsIgnoreCase("true");
     static final String ENDPOINT = System.getProperty("mineral.endpoint");
     static final String FN_NAME = "http://webofcode.org/wfn/min";
     static int nInstances = 0;
@@ -113,14 +113,13 @@ public class min extends FunctionBase {
         if (CACHE_ENABLED) {
             if(cache.containsKey(key)) {
                 result = cache.get(key); 
-                log.info("Loop found for i0={}, result={}", fnArgs, result);
+                log.info("Loop found for i={}, result={}", fnArgs, result);
                 return result==VISITED? nodeNone(): result; 
             } else 
                 cache.put(key, VISITED); // mark as "visited (but not resolved yet)" 
         }
         
         List<RDFNode> solutions = executeQuery(query, ENDPOINT); //service); 
-        //log.info("Result size for i0={} was {}, solutions= {}", i0, solutions.size(), solutions);
         
         if (solutions.size()>0) {
             RDFNode node = solutions.get(0); // only the first solution is used
