@@ -54,6 +54,7 @@ public class mr extends FunctionBase {
 
     static String getopt() {
         String opt = System.getenv​("opt");
+        if (opt==null) opt = System.getenv​("OPT");
         if (opt==null) opt = "memo";
         return opt.toLowerCase();
     }
