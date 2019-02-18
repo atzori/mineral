@@ -43,14 +43,14 @@ import org.apache.jena.sparql.expr.ExprList;
 public class mr extends FunctionBase {
     static Logger log = LoggerFactory.getLogger(mr.class);
     
-    static String optimization = getOptimizationStrategy("memo");
-    static boolean CACHE_ENABLED = !optimization.equals("none");
+    static final String optimization = getOptimizationStrategy("memo"); // parameter specifies the default optimization strategy
+    static final boolean CACHE_ENABLED = !optimization.equals("none");
     static final String ENDPOINT = System.getProperty("mineral.endpoint");
     static final String FN_NAME = "http://webofcode.org/wfn/mr";
     static int nInstances = 0;
-    static Map<String,NodeValue> cache = new ConcurrentHashMap<>();
+    static final Map<String,NodeValue> cache = new ConcurrentHashMap<>();
     static final NodeValue VISITED = NodeValue.makeNode(NodeFactory.createBlankNode("VISITED"));
-    static  String TEMPLATE;
+    static String TEMPLATE;
 
     static String getOptimizationStrategy(String defaultOptimization) {
         String opt = System.getenv​("OPT");
@@ -67,9 +67,13 @@ public class mr extends FunctionBase {
         log.info("Registering function {}", FN_NAME);
         FunctionRegistry.get().put(FN_NAME, mr.class);
         //log.debug(System.getProperties().toString());
+
+        if(ENDPOINT==null) {
+            log.error("No endpoint specified! This is not going to work.");
+        }
         log.info("Endpoint set to {}", ENDPOINT);   
-        log.info("Cache results set to {}", CACHE_ENABLED);
         log.info("Optimization set to {}", optimization);
+        log.info("Cache results set to {}", CACHE_ENABLED);
         
         // load sparql template file     
         try {
