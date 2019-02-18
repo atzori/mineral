@@ -43,7 +43,7 @@ import org.apache.jena.sparql.expr.ExprList;
 public class mr extends FunctionBase {
     static Logger log = LoggerFactory.getLogger(mr.class);
     
-    static final String optimization = getOptimizationStrategy("memo"); // parameter specifies the default optimization strategy
+    static final String optimization = getOptimizationStrategy(); // parameter specifies the default optimization strategy
     static final boolean CACHE_ENABLED = !optimization.equals("none");
     static final String ENDPOINT = System.getProperty("mineral.endpoint");
     static final String FN_NAME = "http://webofcode.org/wfn/mr";
@@ -52,10 +52,17 @@ public class mr extends FunctionBase {
     static final NodeValue VISITED = NodeValue.makeNode(NodeFactory.createBlankNode("VISITED"));
     static String TEMPLATE;
 
-    static String getOptimizationStrategy(String defaultOptimization) {
+    static String getOptimizationStrategy() {
+        final String defaultOptimization = "memo";
+        
         String opt = System.getenv​("OPT");
         if (opt==null) opt = System.getenv​("opt");
         if (opt==null) opt = System.getProperty("mineral.opt");
+        if (opt!=null && !Arrays.asList("none","memo","fast").contains(opt))  {
+            log.error("optimization must be one of: 'none', 'memo', 'fast'. Non-valid '{}' value was specified. Using default {}", opt, defaultOptimization);
+            opt = defaultOptimization;
+        }
+        
         if (opt==null)  {
             log.warn("no optimization specified. Using default {}", defaultOptimization);
             opt = defaultOptimization;
