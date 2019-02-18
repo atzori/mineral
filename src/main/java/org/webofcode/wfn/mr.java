@@ -43,8 +43,8 @@ import org.apache.jena.sparql.expr.ExprList;
 public class mr extends FunctionBase {
     static Logger log = LoggerFactory.getLogger(mr.class);
     
-    static String optimization = getopt();
-    static boolean CACHE_ENABLED = optimization.equals("memo");
+    static String optimization = getOptimizationStrategy("memo");
+    static boolean CACHE_ENABLED = !optimization.equals("none");
     static final String ENDPOINT = System.getProperty("mineral.endpoint");
     static final String FN_NAME = "http://webofcode.org/wfn/mr";
     static int nInstances = 0;
@@ -52,10 +52,14 @@ public class mr extends FunctionBase {
     static final NodeValue VISITED = NodeValue.makeNode(NodeFactory.createBlankNode("VISITED"));
     static  String TEMPLATE;
 
-    static String getopt() {
-        String opt = System.getenv​("opt");
-        if (opt==null) opt = System.getenv​("OPT");
-        if (opt==null) opt = "memo";
+    static String getOptimizationStrategy(String defaultOptimization) {
+        String opt = System.getenv​("OPT");
+        if (opt==null) opt = System.getenv​("opt");
+        if (opt==null) opt = System.getProperty("mineral.opt");
+        if (opt==null)  {
+            log.warn("no optimization specified. Using default {}", defaultOptimization);
+            opt = defaultOptimization;
+        }
         return opt.toLowerCase();
     }
 

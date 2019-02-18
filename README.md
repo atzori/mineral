@@ -16,9 +16,9 @@ We developed the following function (the `wfn` prefix stands for `<http://webofc
 
 that can be used with different optimization strategies (configurable server-side):
   
-  - `none` - no optimization used to cut off 
-  - `memo` - memoization is used to cut off loops and increase speed on already-seen states in the search space
-  - `fast` - accumulator-based recursion inspired by Zaniolo's technique is used to cut off unnecessary branches in the search space including loops (the parameter, `?i0`, is used as an accumulator to be minimized, see below)
+  - `none` - no optimization used to cut off search space (may not end up in case of cycles in the graph)
+  - `memo` - memoization is used to cut off loops (circles in the graph) and increase speed on already-seen states in the search space
+  - `fast` - accumulator-based recursion inspired by Zaniolo's technique is used to cut off unnecessary branches in the search space including loops (the first parameter, `?i0`, must be used as an accumulator to be minimized, see below)
  
 In both versions, optimization can be disabled via server configuration.
 
@@ -35,6 +35,18 @@ Install and compile *(tested with Fuseki 3.8.0)*
     - optimization is `memo` by default, use `OPT=fast` for fast optimization or `OPT=none` to disable optimization
 5. go to: [http://127.0.0.1:3030](http://127.0.0.1:3030) and run a recursive query (see examples below)
 
+
+
+
+Accumulator
+-----------
+From [*Functional Programming: Accumulators* on medium.com](https://medium.com/@matthewdimarcantonio/functional-programming-accumulators-95129a28e1d1):
+
+> An accumulator is an additional argument added to a function. As the function that has an accumulator is continually called upon, the result of the computation so far is stored in the accumulator. After the recursion is done, the value of the accumulator itself is often returned unless further manipulation of the data is needed. 
+
+With `mineral`, in order to use the `fast` optimization, you must use the first parameter `?i0` of the recursive function `:mr` as an accumulator, that is, a monotone non-decreasing value over nested calls. Monotonicity must hold according to `ORDER BY ?i0`, that is, according to natural order in SPARQL. 
+
+In the following a list of examples computing with recursive function both without an accumulator (`fast` optimization strategy cannot be used) and with an accumulator (all optimizations including `fast` can be used).
 
 
 Examples
@@ -65,7 +77,7 @@ or alternatively (more verbose but clearer):
     } 
     
 
-With support for accumulator:
+With support for accumulator (parameter `?i0` is an accumulator):
 
     PREFIX : <http://webofcode.org/wfn/>
     
