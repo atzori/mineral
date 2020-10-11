@@ -44,6 +44,8 @@ From [*Functional Programming: Accumulators* on medium.com](https://medium.com/@
 
 > An accumulator is an additional argument added to a function. As the function that has an accumulator is continually called upon, the result of the computation so far is stored in the accumulator. After the recursion is done, the value of the accumulator itself is often returned unless further manipulation of the data is needed. 
 
+(see [accumulators and folds](https://arothuis.nl/posts/accumulators-and-folds/) for insights on the accumulator pattern and how it relates to recursion)
+
 With `mineral`, in order to use the `fast` optimization, you must use the first parameter `?i0` of the recursive function `:mr` as an accumulator, that is, a monotone non-decreasing value over nested calls. Monotonicity must hold according to `ORDER BY ?i0`, that is, according to natural order in SPARQL. 
 
 In the following a list of examples computing with recursive function both without an accumulator (`fast` optimization strategy cannot be used) and with an accumulator (all optimizations including `fast` can be used).
@@ -135,39 +137,51 @@ With accumulator:
 
 
 ### Graph search: shortest distance between 2 nodes
-In the following it is shown how to compute the shortest distance between two nodes ([dbo:PopulatedPlace](http://dbpedia.org/ontology/PopulatedPlace) and [dbo:Village](http://dbpedia.org/ontology/Village)).
+In the following it is shown how to compute the shortest distance between two nodes ([dbo:Village](http://dbpedia.org/ontology/Village) and [dbo:Location](http://dbpedia.org/ontology/Location) and ).
 
 Without accumulator:
 
-    PREFIX : <http://webofcode.org/wfn/>
+    PREFIX    : <http://webofcode.org/wfn/>
+    PREFIX dbo: <http://dbpedia.org/ontology/> 
 
     SELECT ?result { 
         # bind variables to parameter values 
         VALUES ?query { 
-            "OPTIONAL { ?i0 <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?next } BIND( IF(?i0 = <http://dbpedia.org/ontology/PopulatedPlace>, 0 , 1 + wfn:mr(?query, ?next)) AS ?result)" }
+            "OPTIONAL { ?i0 <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?next } BIND( IF(?i0 = ?i1, 0 , IF(bound(?next), 1 + wfn:mr(?query, ?next, ?i1), ?a)) AS ?result)" }
 
         # actual call of the recursive query 
-        BIND( :mr(?query, <http://dbpedia.org/ontology/Village>) AS ?result)
+        BIND( :mr(?query, dbo:Village, dbo:Location) AS ?result)
     } 
 
 
+Note that looking for the maxumum distance (`max` instead of `min`) is also possible by using negative numbers:
 
-With accumulator:
-
-    PREFIX : <http://webofcode.org/wfn/>
+    PREFIX    : <http://webofcode.org/wfn/>
+    PREFIX dbo: <http://dbpedia.org/ontology/> 
 
     SELECT ?result { 
         # bind variables to parameter values 
         VALUES ?query { 
-            "OPTIONAL { ?i1 <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?next } BIND( IF(?i1 = <http://dbpedia.org/ontology/PopulatedPlace>, ?i0, :mr(?query, ?i0+1, ?next)) AS ?result)" }
+            "OPTIONAL { ?i0 <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?next } BIND( IF(?i0 = ?i1, 0 , IF(bound(?next), -1 + wfn:mr(?query, ?next, ?i1), ?a)) AS ?result)" }
 
         # actual call of the recursive query 
-        BIND( :mr(?query, 0, <http://dbpedia.org/ontology/Village>) AS ?result)
+        BIND( -1 * :mr(?query, dbo:Village, dbo:Location) AS ?result)
     } 
 
 
+Shortest distance with accumulator:
 
+    PREFIX    : <http://webofcode.org/wfn/>
+    PREFIX dbo: <http://dbpedia.org/ontology/> 
 
+    SELECT ?result { 
+        # bind variables to parameter values 
+        VALUES ?query { 
+            "OPTIONAL { ?i1 <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?next } BIND( IF(?i1 = ?i2, ?i0, :mr(?query, ?i0+1, ?next, ?i2)) AS ?result)" }
+
+        # actual call of the recursive query 
+        BIND( :mr(?query, 0, dbo:Village, dbo:Location) AS ?result)
+    }
 
 
 

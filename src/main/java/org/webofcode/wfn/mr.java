@@ -48,9 +48,13 @@ public class mr extends FunctionBase {
     static final String ENDPOINT = System.getProperty("mineral.endpoint");
     static final String FN_NAME = "http://webofcode.org/wfn/mr";
     static int nInstances = 0;
+    int instanceID;
     static final Map<String,NodeValue> cache = new ConcurrentHashMap<>();
     static final NodeValue VISITED = NodeValue.makeNode(NodeFactory.createBlankNode("VISITED"));
     static String TEMPLATE;
+
+
+    static NodeValue bestSolutionSoFar = null;
 
     static String getOptimizationStrategy() {
         final String defaultOptimization = "memo";
@@ -93,6 +97,7 @@ public class mr extends FunctionBase {
     }
     public mr() {
         nInstances += 1;
+        instanceID = nInstances;
         //log.debug("Creating instance #{}", nInstances);
     }
 
@@ -116,7 +121,7 @@ public class mr extends FunctionBase {
         String querySnippet = args.get(0).toString();
         List<NodeValue> fnArgs = new ArrayList<>(args);
         fnArgs.remove(0);
-        log.info("Calling with {}", fnArgs);
+        log.info("Calling mr#{} with {}", instanceID, fnArgs);
             
 
         String varNames = IntStream.range(0,fnArgs.size()).mapToObj(i -> "?i"+i).collect(Collectors.joining(" "));
@@ -142,6 +147,25 @@ public class mr extends FunctionBase {
                 cache.put(key, VISITED); // mark as "visited (but not resolved yet)" 
         }
         
+        
+        // fast optimization
+        if (optimization.equals("fast") && bestSolutionSoFar != null && args.get(1) instanceof NodeValue) {
+            NodeValue acc = (NodeValue) args.get(1); // accumulator
+            // print runtime type info on acc.
+            //if (bestSolutionSoFar.toString().compareTo(acc.toString()) <= 0) {
+            if(NodeValue.compareAlways(bestSolutionSoFar, acc) <= 0) {  // ORDERBY ordering
+                //log.debug(bestSolutionSoFar.getClass().getName());
+                //log.debug(acc.getClass().getName());
+                
+            
+                log.info("Branch of mr#{} was CUT by fast optimization", instanceID);
+                return nodeNone(); // acc; // cut this computation branch (optimization)
+            }
+            
+        }
+     
+        
+        
         List<RDFNode> solutions = executeQuery(query, ENDPOINT); //service); 
         
         if (solutions.size()>0) {
@@ -153,8 +177,18 @@ public class mr extends FunctionBase {
         }
 
 	    //log.info("Result was {}", result);
-	    log.info("Result for {} was {}, solutions={}", fnArgs, result, solutions);
+	    log.info("Result of mr#{} for {} was {}, solutions={}", instanceID, fnArgs, result, solutions);
         if(CACHE_ENABLED) cache.put(key, result);
+        
+                
+        // fast optimization
+        if (optimization.equals("fast")) {
+            if (bestSolutionSoFar == null ||  NodeValue.compareAlways(bestSolutionSoFar, result) > 0) {
+                bestSolutionSoFar = result; // NodeValue
+                log.info("From mr#{} new best solution so far {} for fast optimization", instanceID, bestSolutionSoFar);
+            }
+            
+        }
         return result;        
 
     }

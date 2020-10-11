@@ -11,5 +11,5 @@ dbo:Place rdfs:subClassOf dbo:Location.
 dbo:Location rdfs:subClassOf owl:Thing.
 
 
-#dbo:Settlement rdfs:subClassOf dbo:Settlement.
+#dbo:Settlement rdfs:subClassOf dbo:Settlement. # loop
 
