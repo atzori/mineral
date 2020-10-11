@@ -8,6 +8,12 @@
 
 
 # config.ttl can be copied to "fuseki/run/"
-FUSEKI_HOME=fuseki FUSEKI_BASE=fuseki/run  java -Dmineral.endpoint=http://127.0.0.1:3030/ds/sparql -Dmineral.sparql_template=./config/sparql_template.rq -Dlog4j.configuration=file:./config/log4j.properties -Dmineral.opt=fast -Xmx1200M -cp "target/classes/:fuseki/fuseki-server.jar" org.apache.jena.fuseki.cmd.FusekiCmd --config config/config.ttl 
+FUSEKI_HOME=fuseki FUSEKI_BASE=fuseki/run  java \
+ -Dmineral.endpoint=http://127.0.0.1:3030/ds/sparql \
+ -Dmineral.sparql_template=./config/sparql_template.rq \
+ -Dmineral.opt=auto \
+ -Dmineral.cache=false \
+ -Dlog4j.configuration=file:./config/log4j.properties \
+ -Xmx1200M -cp "target/classes/:fuseki/fuseki-server.jar" org.apache.jena.fuseki.cmd.FusekiCmd --config config/config.ttl 
 #--jetty-config config/jetty.xml --timeout=500,500
 

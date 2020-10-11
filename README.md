@@ -12,27 +12,28 @@ Functions and usage
 -------------------
 We developed the following function (the `wfn` prefix stands for `<http://webofcode.org/wfn/>`):
 
-    wfn:mr(?query [, ?i0, ?i1, ...])
+    wfn:mr([?acc,] ?query [, ?i0, ?i1, ...])
 
 that can be used with different optimization strategies (configurable server-side):
   
   - `none` - no optimization used to cut off search space (may not end up in case of cycles in the graph)
-  - `memo` - memoization is used to cut off loops (circles in the graph) and increase speed on already-seen states in the search space
-  - `fast` - accumulator-based recursion inspired by Zaniolo's technique is used to cut off unnecessary branches in the search space including loops (the first parameter, `?i0`, must be used as an accumulator to be minimized, see below)
- 
-In both versions, optimization can be disabled via server configuration.
+  - `fast` - accumulator-based recursion inspired by Zaniolo's technique is used to cut off unnecessary branches in the search space including loops (the first parameter, `?acc`, must be provided and used as an accumulator to be minimized, see below)
+  - `auto` - automatically chose between none and fast by detecting if an accumulator has been provided to the `mr` function (default)
 
+In both versions, caching (memoization) of partial results can be enabled to cut off loops (circles in the graph) and increase speed on already-seen states in the search space.
+ 
 
 Install and compile *(tested with Fuseki 3.8.0)*
 -------------------
 1. ensure you have OpenJDK 8 or later correctly installed
 2. download and extract [Apache Fuseki 2](https://jena.apache.org/download/#apache-jena-fuseki) on directory `./fuseki`
 3. compile Java source code of functions: `./compile`
-4. run fuseki using testing settings: `OPT=memo ./run-fuseki`
+4. run fuseki using testing settings: `OPT=auto CACHE=false ./run-fuseki`
     - fuseki server settings in `config/config.ttl` 
     - initial data in `config/dataset.ttl` 
     - log4j settings in `config/log4j.properties`
-    - optimization is `memo` by default, use `OPT=fast` for fast optimization or `OPT=none` to disable optimization
+    - optimization is `auto` by default, use `OPT=fast` for fast optimization or `OPT=none` to disable optimization
+    - caching is disabled by default, use `CACHE=true` to enable memoization of results
 5. go to: [http://127.0.0.1:3030](http://127.0.0.1:3030) and run a recursive query (see examples below)
 
 
@@ -176,13 +177,14 @@ Shortest distance with accumulator:
 
     SELECT ?result { 
         # bind variables to parameter values 
-        VALUES ?query { 
-            "OPTIONAL { ?i1 <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?next } BIND( IF(?i1 = ?i2, ?i0, :mr(?query, ?i0+1, ?next, ?i2)) AS ?result)" }
+        VALUES ?query { """
+            OPTIONAL { ?i0 <http://www.w3.org/2000/01/rdf-schema#subClassOf> ?next } 
+            BIND( IF(?i0 = ?i1, ?acc, :mr(?acc+1, ?query, ?next, ?i1)) AS ?result)
+        """ }
 
         # actual call of the recursive query 
-        BIND( :mr(?query, 0, dbo:Village, dbo:Location) AS ?result)
+        BIND( :mr(0, ?query, dbo:Village, dbo:Location) AS ?result)
     }
-
 
 
 

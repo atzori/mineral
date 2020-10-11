@@ -8,6 +8,7 @@ package org.webofcode.wfn;
 import org.apache.jena.sparql.function.*;
 import org.apache.jena.sparql.expr.NodeValue;
 import org.apache.jena.sparql.expr.nodevalue.NodeValueInteger;
+import org.apache.jena.sparql.expr.nodevalue.NodeValueString;
 import org.apache.jena.sparql.function.FunctionRegistry;
 
 
@@ -44,7 +45,7 @@ public class mr extends FunctionBase {
     static Logger log = LoggerFactory.getLogger(mr.class);
     
     static final String optimization = getOptimizationStrategy(); // parameter specifies the default optimization strategy
-    static final boolean CACHE_ENABLED = !optimization.equals("none");
+    static final boolean CACHE_ENABLED = getCaching();
     static final String ENDPOINT = System.getProperty("mineral.endpoint");
     static final String FN_NAME = "http://webofcode.org/wfn/mr";
     static int nInstances = 0;
@@ -56,14 +57,33 @@ public class mr extends FunctionBase {
 
     static NodeValue bestSolutionSoFar = null;
 
+
+    static boolean getCaching() {
+        final String defaultCaching = "false";
+        
+        String opt = System.getenv​("CACHE");
+        if (opt==null) opt = System.getenv​("cache");
+        if (opt==null) opt = System.getProperty("mineral.cache");
+        if (opt!=null && !Arrays.asList("true","false").contains(opt))  {
+            log.error("caching must be one of: 'true', 'false'. Non-valid '{}' value was specified. Using default {}", opt, defaultCaching);
+            opt = defaultCaching;
+        }
+        
+        if (opt==null)  {
+            log.warn("no caching specified. Using default {}", defaultCaching);
+            opt = defaultCaching;
+        }
+        return Boolean.parseBoolean(opt.toLowerCase());
+    }
+
     static String getOptimizationStrategy() {
-        final String defaultOptimization = "memo";
+        final String defaultOptimization = "auto";
         
         String opt = System.getenv​("OPT");
         if (opt==null) opt = System.getenv​("opt");
         if (opt==null) opt = System.getProperty("mineral.opt");
-        if (opt!=null && !Arrays.asList("none","memo","fast").contains(opt))  {
-            log.error("optimization must be one of: 'none', 'memo', 'fast'. Non-valid '{}' value was specified. Using default {}", opt, defaultOptimization);
+        if (opt!=null && !Arrays.asList("none","fast","auto").contains(opt))  {
+            log.error("optimization must be one of: 'none', 'fast', 'auto'. Non-valid '{}' value was specified. Using default {}", opt, defaultOptimization);
             opt = defaultOptimization;
         }
         
@@ -102,6 +122,26 @@ public class mr extends FunctionBase {
     }
 
 
+    
+    protected boolean useOptimization(List<NodeValue> args) {
+        if (optimization.equals("fast")) return true;
+        if (optimization.equals("none")) return false;
+        // OPT=auto
+        if(args.size()<2) return false; // must have at least accumulator and a query snippet
+        if(!(args.get(1) instanceof NodeValueString)) return false; // for optimization, query snippet (String) must be the second parameter
+       
+        if(!(args.get(0) instanceof NodeValueString)) return true; // no ambiguity
+        
+        
+        String q = args.get(1).getString().toLowerCase();
+        if(q.contains("prefix ") || q.contains("select ") || (q.contains("{") && q.contains("}"))  || q.contains("optional ") )
+            return true;
+        
+        return false;
+        
+        
+    }
+
     @Override
     public void checkBuild(String uri, ExprList args) { 
         if ( args.size() < 1 )
@@ -117,21 +157,45 @@ public class mr extends FunctionBase {
         if ( args.size() < 1 )
             throw new ExprEvalException(Lib.className(this)+": Wrong number of arguments: Wanted 1+, got "+args.size()) ;
         
+        boolean useOptimization = useOptimization(args);
+        
 
-        String querySnippet = args.get(0).toString();
+        String querySnippet =  args.get(useOptimization?1:0).getString(); //String.format("'''%s'''", args.get(0).getString());
         List<NodeValue> fnArgs = new ArrayList<>(args);
-        fnArgs.remove(0);
-        log.info("Calling mr#{} with {}", instanceID, fnArgs);
+        
+        if(useOptimization)
+            fnArgs.remove(1); // removing query
+        else 
+            fnArgs.remove(0); // removing query
             
+            
+        if(optimization.equals("auto") && useOptimization) 
+            log.info("Calling mr#{} with {} with auto-detected optimization", instanceID, fnArgs);
+        else 
+            log.info("Calling mr#{} with {}", instanceID, fnArgs);
+        
+      
 
-        String varNames = IntStream.range(0,fnArgs.size()).mapToObj(i -> "?i"+i).collect(Collectors.joining(" "));
-        String varValues = args.stream().map(e -> e.toString()).collect(Collectors.joining("\n"));
+        String varNames = IntStream.range(0,fnArgs.size() - (useOptimization?1:0)).mapToObj(i -> "?i"+i).collect(Collectors.joining(" "));
+        String varValues = args.stream().map(e -> {
+            if(e instanceof NodeValueString)
+                return String.format("'''%s'''", e.getString());
+            else 
+                return e.toString();
+            
+        }).collect(Collectors.joining("\n"));
 
-        String bindings = String.format("VALUES (?query %s) { (\n%s\n)}", varNames, varValues);
+        String bindings;
+        if(useOptimization) {
+            bindings = String.format("VALUES (?acc ?query %s) { (\n%s\n)}", varNames, varValues);
+        } else {
+            bindings = String.format("VALUES (?query %s) { (\n%s\n)}", varNames, varValues);
+        }    
         
         String query = TEMPLATE
-            .replace("%query_snippet%", querySnippet.trim().replaceAll("^\\\"(.*)\\\"$","$1"))
+            .replace("%query_snippet%", querySnippet ) //.trim().replaceAll("^\\\"(.*)\\\"$","$1")) 
             .replace("%bindings%", bindings);
+        
                     
                 
         NodeValue result = null;  
@@ -164,8 +228,8 @@ public class mr extends FunctionBase {
             
         }
      
-        
-        
+        //log.info("executing query:\n {}", query);
+                
         List<RDFNode> solutions = executeQuery(query, ENDPOINT); //service); 
         
         if (solutions.size()>0) {
