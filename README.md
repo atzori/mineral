@@ -45,9 +45,9 @@ From [*Functional Programming: Accumulators* on medium.com](https://medium.com/@
 
 > An accumulator is an additional argument added to a function. As the function that has an accumulator is continually called upon, the result of the computation so far is stored in the accumulator. After the recursion is done, the value of the accumulator itself is often returned unless further manipulation of the data is needed. 
 
-(see [accumulators and folds](https://arothuis.nl/posts/accumulators-and-folds/) for insights on the accumulator pattern and how it relates to recursion)
+(see [*accumulators and folds*](https://arothuis.nl/posts/accumulators-and-folds/) for insights on the accumulator pattern and how it relates to recursion)
 
-With `mineral`, in order to use the `fast` optimization, you must use the first parameter `?i0` of the recursive function `:mr` as an accumulator, that is, a monotone non-decreasing value over nested calls. Monotonicity must hold according to `ORDER BY ?i0`, that is, according to natural order in SPARQL. 
+With `mineral`, in order to use the `fast` optimization, you must use the first parameter `?acc` of the recursive function `:mr` as an accumulator, that is, a monotone non-decreasing value over nested calls. Monotonicity must hold according to `ORDER BY ?acc`, that is, according to natural order in SPARQL. 
 
 In the following a list of examples computing with recursive function both without an accumulator (`fast` optimization strategy cannot be used) and with an accumulator (all optimizations including `fast` can be used).
 
@@ -80,12 +80,12 @@ or alternatively (more verbose but clearer):
     } 
     
 
-With support for accumulator (parameter `?i0` is an accumulator):
+With support for accumulator (parameter `?acc` is an accumulator):
 
     PREFIX : <http://webofcode.org/wfn/>
     
     SELECT ?result { 
-        BIND(:mr("BIND ( IF(?i1 <= 0, ?i0, :mr(?query, ?i0 * ?i1, ?i1-1)) AS ?result)", 1, 3) AS ?result)
+        BIND(:mr(1, "BIND ( IF(?i0 <= 0, ?acc, :mr(?acc * ?i0, ?query, ?i0-1)) AS ?result)", 3) AS ?result)
     } 
 
 
@@ -96,16 +96,16 @@ or verbosely:
     
     SELECT ?result { 
         # bind variables to parameter values 
-        VALUES ?query { "BIND ( IF(?i1 <= 0, ?a, :mr(?query, ?i0 * ?i1, ?i1-1)) AS ?result)" }
+        VALUES ?query { "BIND ( IF(?i0 <= 0, ?acc, :mr(?acc * ?i0, ?query, ?i0-1)) AS ?result)" }
 
         # actual call of the recursive query 
-        BIND(:mr(?query, 1, 3) AS ?result)
+        BIND(:mr(1, ?query, 3) AS ?result)
     } 
 
 
 
 ### Computing Fibonacci
-Compute the fibonacci number 
+Compute the fibonacci number of 6.
 
 Without accumulator:
 
@@ -129,12 +129,11 @@ With accumulator:
     SELECT ?result { 
         # bind variables to parameter values 
         VALUES ?query { 
-           "BIND ( IF(?i2 <= 0, ?i0, :mr(?query, ?i0 + ?i1, ?i0, ?i2 -1 ) ) AS ?result)" }
+           "BIND ( IF(?i1 <= 0, ?acc, :mr(?acc + ?i0, ?query, ?acc, ?i1 -1 ) ) AS ?result)" }
 
         # actual call of the recursive query 
-        BIND(:mr(?query, 0, 1, 47) AS ?result)
+        BIND(:mr(0, ?query, 1, 6) AS ?result)
     } 
-
 
 
 ### Graph search: shortest distance between 2 nodes
